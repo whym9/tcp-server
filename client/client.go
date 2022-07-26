@@ -28,7 +28,7 @@ func main() {
 			break
 		}
 		if err != nil {
-			fmt.Printf("oh no")
+		
 			panic(err)
 
 		}
@@ -36,7 +36,7 @@ func main() {
 		fmt.Println(len(data))
 		_, err = connect.Write(data)
 
-		fmt.Println(".")
+		
 	}
 	connect.Write([]byte("ok"))
 
