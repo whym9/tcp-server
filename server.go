@@ -86,7 +86,7 @@ func countTCPAndUDP(connect net.Conn) {
 		err = parser.DecodeLayers(read[:n], &decoded)
 
 		if err != nil {
-			fmt.Println("oh oh")
+			
 			log.Fatal(err)
 			break
 		}
@@ -105,9 +105,9 @@ func countTCPAndUDP(connect net.Conn) {
 				counter.IPv6++
 			}
 		}
-		fmt.Println(".")
+		
 	}
-	fmt.Println(",")
+	
 
 	res := "TCP: " + strconv.Itoa(counter.TCP) + "\n" +
 		"UDP: " + strconv.Itoa(counter.UDP) + "\n" +
