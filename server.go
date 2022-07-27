@@ -68,10 +68,25 @@ func countTCPAndUDP(connect net.Conn) {
 		&payload,
 		&tls,
 	)
+	n, err := connect.Read(read)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	file_size, err := strconv.Atoi(string(read[:n]))
+	received := 0
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
 
 	decoded := make([]gopacket.LayerType, 0, 10)
 
 	for {
+		if file_size == received {
+			break
+		}
 		n, err := connect.Read(read)
 
 		fmt.Printf("File size: %v\n", n)
@@ -80,16 +95,8 @@ func countTCPAndUDP(connect net.Conn) {
 			log.Fatal(err)
 			break
 		}
-		if string(read[:n]) == "ok" {
-			break
-		}
-		err = parser.DecodeLayers(read[:n], &decoded)
 
-		if err != nil {
-			fmt.Println("oh oh")
-			log.Fatal(err)
-			break
-		}
+		err = parser.DecodeLayers(read[:n], &decoded)
 
 		for _, layer := range decoded {
 			if layer == layers.LayerTypeTCP {
@@ -105,9 +112,8 @@ func countTCPAndUDP(connect net.Conn) {
 				counter.IPv6++
 			}
 		}
-		fmt.Println(".")
+		received += n
 	}
-	fmt.Println(",")
 
 	res := "TCP: " + strconv.Itoa(counter.TCP) + "\n" +
 		"UDP: " + strconv.Itoa(counter.UDP) + "\n" +
