@@ -60,24 +60,3 @@ func main() {
 	connect.Close()
 
 }
-
-func file_size(filename string) uint64 {
-	handle, err := pcap.OpenOffline(filename)
-
-	if err != nil {
-		log.Fatal(err)
-		return 0
-	}
-	var size uint64 = 0
-	for {
-		data, _, err := handle.ZeroCopyReadPacketData()
-
-		if err == io.EOF || err != nil {
-			break
-		}
-		size += uint64(len(data))
-
-	}
-
-	return size
-}

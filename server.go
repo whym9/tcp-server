@@ -42,15 +42,12 @@ type Protocols struct {
 var counter Protocols
 
 var (
-	eth     layers.Ethernet
-	ip4     layers.IPv4
-	ip6     layers.IPv6
-	tcp     layers.TCP
-	udp     layers.UDP
-	dns     layers.DNS
-	llc     layers.LLC
-	payload gopacket.Payload
-	tls     layers.TLS
+	eth layers.Ethernet
+	ip4 layers.IPv4
+	ip6 layers.IPv6
+	tcp layers.TCP
+	udp layers.UDP
+	dns layers.DNS
 )
 
 func countTCPAndUDP(connect net.Conn) {
@@ -63,9 +60,6 @@ func countTCPAndUDP(connect net.Conn) {
 		&tcp,
 		&udp,
 		&dns,
-		&llc,
-		&payload,
-		&tls,
 	)
 
 	decoded := make([]gopacket.LayerType, 0, 10)
@@ -92,6 +86,11 @@ func countTCPAndUDP(connect net.Conn) {
 
 		err = parser.DecodeLayers(read, &decoded)
 
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
+
 		for _, layer := range decoded {
 			if layer == layers.LayerTypeTCP {
 				counter.TCP++
@@ -113,7 +112,8 @@ func countTCPAndUDP(connect net.Conn) {
 		"UDP: " + strconv.Itoa(counter.UDP) + "\n" +
 		"IPv4: " + strconv.Itoa(counter.IPv4) + "\n" +
 		"IPv6: " + strconv.Itoa(counter.IPv6) + "\n"
-	//fmt.Println(string(res))
+
 	connect.Write([]byte(res))
 	connect.Close()
+	counter = Protocols{}
 }
