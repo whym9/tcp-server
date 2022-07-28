@@ -84,12 +84,8 @@ func countTCPAndUDP(connect net.Conn) {
 		}
 		fmt.Printf("File size: %v\n", size)
 
-		err = parser.DecodeLayers(read, &decoded)
+		parser.DecodeLayers(read, &decoded)
 
-		if err != nil {
-			log.Fatal(err)
-			return
-		}
 
 		for _, layer := range decoded {
 			if layer == layers.LayerTypeTCP {
