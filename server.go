@@ -1,8 +1,8 @@
 package main
 
 import (
+	"encoding/binary"
 	"fmt"
-	"io"
 	"log"
 	"net"
 	"strconv"
@@ -54,7 +54,6 @@ var (
 )
 
 func countTCPAndUDP(connect net.Conn) {
-	read := make([]byte, 65024)
 
 	parser := gopacket.NewDecodingLayerParser(
 		layers.LayerTypeEthernet,
@@ -68,35 +67,30 @@ func countTCPAndUDP(connect net.Conn) {
 		&payload,
 		&tls,
 	)
-	n, err := connect.Read(read)
-	if err != nil {
-		log.Fatal(err)
-		return
-	}
-
-	file_size, err := strconv.Atoi(string(read[:n]))
-	received := 0
-	if err != nil {
-		log.Fatal(err)
-		return
-	}
 
 	decoded := make([]gopacket.LayerType, 0, 10)
 
 	for {
-		if file_size == received {
-			break
-		}
-		n, err := connect.Read(read)
+		read := make([]byte, 8)
 
-		fmt.Printf("File size: %v\n", n)
-
-		if err != nil || err == io.EOF {
+		_, err := connect.Read(read)
+		if err != nil {
 			log.Fatal(err)
+			return
+		}
+		size := binary.BigEndian.Uint64(read)
+		read = make([]byte, size)
+		_, err = connect.Read(read)
+		if size == 4 && string(read) == "STOP" {
 			break
 		}
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
+		fmt.Printf("File size: %v\n", size)
 
-		err = parser.DecodeLayers(read[:n], &decoded)
+		err = parser.DecodeLayers(read, &decoded)
 
 		for _, layer := range decoded {
 			if layer == layers.LayerTypeTCP {
@@ -112,14 +106,14 @@ func countTCPAndUDP(connect net.Conn) {
 				counter.IPv6++
 			}
 		}
-		received += n
+
 	}
 
 	res := "TCP: " + strconv.Itoa(counter.TCP) + "\n" +
 		"UDP: " + strconv.Itoa(counter.UDP) + "\n" +
 		"IPv4: " + strconv.Itoa(counter.IPv4) + "\n" +
 		"IPv6: " + strconv.Itoa(counter.IPv6) + "\n"
-	fmt.Println(string(res))
+	//fmt.Println(string(res))
 	connect.Write([]byte(res))
 	connect.Close()
 }
