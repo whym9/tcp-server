@@ -24,7 +24,10 @@ func main() {
 	connect, err := net.Dial("tcp", "localhost:8080")
 
 	size := file_size(filename)
-
+	if size == 0 {
+		fmt.Println("error")
+		return
+	}
 	connect.Write([]byte(strconv.Itoa(size)))
 	for {
 		data, _, err := handle.ZeroCopyReadPacketData()
@@ -32,7 +35,6 @@ func main() {
 			break
 		}
 		if err != nil {
-
 			panic(err)
 
 		}
