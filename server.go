@@ -39,8 +39,6 @@ type Protocols struct {
 	IPv6 int
 }
 
-var counter Protocols
-
 var (
 	eth layers.Ethernet
 	ip4 layers.IPv4
@@ -63,8 +61,9 @@ func countTCPAndUDP(connect net.Conn) {
 	)
 
 	decoded := make([]gopacket.LayerType, 0, 10)
-
+	counter := Protocols{}
 	for {
+
 		read := make([]byte, 8)
 
 		_, err := connect.Read(read)
@@ -74,22 +73,24 @@ func countTCPAndUDP(connect net.Conn) {
 		}
 		size := binary.BigEndian.Uint64(read)
 		read = make([]byte, size)
-		_, err = connect.Read(read)
+		n, err := connect.Read(read)
+
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
+
+		for uint64(n) != size {
+			n, err = connect.Read(read)
+		}
+
 		if size == 4 && string(read) == "STOP" {
 			break
 		}
-		if err != nil {
-			log.Fatal(err)
-			return
-		}
+
 		fmt.Printf("File size: %v\n", size)
 
 		err = parser.DecodeLayers(read, &decoded)
-
-		if err != nil {
-			log.Fatal(err)
-			return
-		}
 
 		for _, layer := range decoded {
 			if layer == layers.LayerTypeTCP {
@@ -115,5 +116,6 @@ func countTCPAndUDP(connect net.Conn) {
 
 	connect.Write([]byte(res))
 	connect.Close()
-	counter = Protocols{}
+	fmt.Println("File receiving has ended")
+	fmt.Println()
 }
