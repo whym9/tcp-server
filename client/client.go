@@ -1,12 +1,12 @@
 package main
 
 import (
+	"encoding/binary"
 	"flag"
 	"fmt"
 	"io"
 	"log"
 	"net"
-	"strconv"
 
 	"github.com/google/gopacket/pcap"
 )
@@ -23,17 +23,20 @@ func main() {
 
 	connect, err := net.Dial("tcp", "localhost:8080")
 
-	size := file_size(filename)
-	if size == 0 {
-		fmt.Println("error")
-		return
-	}
-	connect.Write([]byte(strconv.Itoa(size)))
 	for {
+
 		data, _, err := handle.ZeroCopyReadPacketData()
 		if err == io.EOF || err != nil {
+			bin := make([]byte, 8)
+			binary.BigEndian.PutUint64(bin, 4)
+			connect.Write(bin)
+			connect.Write([]byte("STOP"))
 			break
 		}
+		bin := make([]byte, 8)
+		binary.BigEndian.PutUint64(bin, uint64(len(data)))
+		connect.Write([]byte(bin))
+
 		if err != nil {
 			panic(err)
 
@@ -58,21 +61,21 @@ func main() {
 
 }
 
-func file_size(filename string) int {
+func file_size(filename string) uint64 {
 	handle, err := pcap.OpenOffline(filename)
 
 	if err != nil {
 		log.Fatal(err)
 		return 0
 	}
-	size := 0
+	var size uint64 = 0
 	for {
 		data, _, err := handle.ZeroCopyReadPacketData()
 
 		if err == io.EOF || err != nil {
 			break
 		}
-		size += len(data)
+		size += uint64(len(data))
 
 	}
 
