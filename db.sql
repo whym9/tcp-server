@@ -1,5 +1,6 @@
 CREATE DATABASE pcap_files;
 
+USE pcap_files;
 
 CREATE TABLE File (
     FileID int NOT NULL,
