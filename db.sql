@@ -2,7 +2,7 @@ CREATE DATABASE pcap_files;
 
 USE pcap_files;
 
-CREATE TABLE File (
+CREATE TABLE Files (
     FileID int NOT NULL,
     FileName varchar(255),
     Size int,
@@ -18,7 +18,7 @@ CREATE TABLE Packets (
     Size INT,
     PRIMARY KEY (PacketID),
     Data VARBINARY(65535),
-    FOREIGN KEY (FileID) REFERENCES File(FileID)
+    FOREIGN KEY (FileID) REFERENCES Files (FileID)
 );
 
 CREATE TABLE Statistics (
@@ -28,7 +28,7 @@ CREATE TABLE Statistics (
     IPv4 INT,
     IPv6 INT,
     PRIMARY KEY (ID),
-    FOREIGN KEY (FileID) REFERENCES File(FileID)
+    FOREIGN KEY (FileID) REFERENCES Files (FileID)
 );
 
 
