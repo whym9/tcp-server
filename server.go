@@ -82,8 +82,9 @@ func countTCPAndUDP(connect net.Conn) {
 
 		for uint64(n) != size {
 			n1 := size - uint64(n)
-			read := make([]byte, n1)
-			n2, err := connect.Read(read)
+			read2 := make([]byte, n1)
+			n2, err := connect.Read(read2)
+			read = append(read, read2...)
 			if err != nil {
 				log.Fatal(err)
 			}
