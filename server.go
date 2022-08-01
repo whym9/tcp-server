@@ -63,45 +63,17 @@ func countTCPAndUDP(connect net.Conn) {
 	decoded := make([]gopacket.LayerType, 0, 10)
 	counter := Protocols{}
 	for {
+		read, err := receiveAll(connect, 8)
 
-		read := make([]byte, 8)
-
-		n, err := connect.Read(read)
 		if err != nil {
 			log.Fatal(err)
 			return
-		}
-
-		for uint64(n) != 8 {
-			n1 := 8 - uint64(n)
-			read2 := make([]byte, n1)
-			n2, err := connect.Read(read2)
-			read = append(read, read2...)
-			if err != nil {
-				log.Fatal(err)
-			}
-			n += n2
 		}
 
 		size := binary.BigEndian.Uint64(read)
+
+		read, err = receiveAll(connect, size)
 		read = make([]byte, size)
-		n, err = connect.Read(read)
-
-		if err != nil {
-			log.Fatal(err)
-			return
-		}
-
-		for uint64(n) != size {
-			n1 := size - uint64(n)
-			read2 := make([]byte, n1)
-			n2, err := connect.Read(read2)
-			read = append(read, read2...)
-			if err != nil {
-				log.Fatal(err)
-			}
-			n += n2
-		}
 
 		if size == 4 && string(read) == "STOP" {
 			break
@@ -137,4 +109,25 @@ func countTCPAndUDP(connect net.Conn) {
 	connect.Close()
 	fmt.Println("File receiving has ended")
 	fmt.Println()
+}
+
+func receiveAll(connect net.Conn, size uint64) ([]byte, error) {
+	read := make([]byte, int(size))
+	n, err := connect.Read(read)
+
+	if err != nil {
+
+		return []byte{}, err
+	}
+	for uint64(n) != size {
+		n1 := size - uint64(n)
+		read2 := make([]byte, n1)
+		n2, err := connect.Read(read2)
+		read = append(read, read2...)
+		if err != nil {
+			return []byte{}, err
+		}
+		n += n2
+	}
+	return read, nil
 }
