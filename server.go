@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"net"
 	"os"
 	"strconv"
@@ -76,6 +77,7 @@ func countTCPAndUDP(connect net.Conn) {
 
 	decoded := make([]gopacket.LayerType, 0, 10)
 	counter := Protocols{}
+	ind := rand.Intn(10000)
 	fileName := dirName + "/lo" + strconv.Itoa(ind) + ".pcap"
 
 	file, err := os.Create(fileName)
@@ -124,12 +126,7 @@ func countTCPAndUDP(connect net.Conn) {
 		}
 		packet := gopacket.NewPacket(read, layers.LayerTypeEthernet, gopacket.Default)
 
-		err = w.WritePacket(packet.Metadata().CaptureInfo, packet.Data())
-
-		if err != nil {
-			log.Fatal(err)
-			return
-		}
+		w.WritePacket(packet.Metadata().CaptureInfo, read)
 
 	}
 	go saveToDB(counter, dirName+fileName)
@@ -155,16 +152,6 @@ func receiveALL(connect net.Conn, size uint64) ([]byte, error) {
 		return []byte{}, err
 	}
 
-	// for uint64(n) != size {
-	// 	n1 := 8 - uint64(n)
-	// 	read2 := make([]byte, n1)
-	// 	n2, err := io.ReadF
-	// 	read = append(read, read2...)
-	// 	if err != nil {
-	// 		log.Fatal(err)
-	// 	}
-	// 	n += n2
-	// }
 	return read, nil
 }
 
@@ -179,8 +166,9 @@ type Statistics struct {
 
 func saveToDB(counter Protocols, filePath string) {
 
-	sqlDB, err := sql.Open("mysql", "pcap_files")
+	sqlDB, err := sql.Open("mysql", "Myserver")
 	if err != nil {
+
 		log.Fatal(err)
 		return
 	}
@@ -201,6 +189,6 @@ func saveToDB(counter Protocols, filePath string) {
 		return
 	}
 
-	fmt.Printf("Record saved to DataBase!")
+	fmt.Printf("Record saved to Database!")
 
 }
