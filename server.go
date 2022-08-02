@@ -166,7 +166,7 @@ type Statistics struct {
 
 func saveToDB(counter Protocols, filePath string) {
 
-	sqlDB, err := sql.Open("mysql", "Myserver")
+	sqlDB, err := sql.Open("mysql", "myserver_dsn")
 	if err != nil {
 
 		log.Fatal(err)
