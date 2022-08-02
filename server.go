@@ -21,7 +21,10 @@ import (
 
 const dirName = "./saved_files"
 
+var gormDB *gorm.DB
+
 func main() {
+	DB()
 	err := os.MkdirAll(dirName, os.ModePerm)
 	if err != nil {
 		log.Fatalf("couldn't create path, %v", err)
@@ -163,17 +166,21 @@ type Statistics struct {
 	IPv6       int
 }
 
-func saveToDB(counter Protocols, filePath string) {
-
+func DB() *gorm.DB {
 	sqlDB, err := sql.Open("mysql", "myserver_dsn")
 	if err != nil {
 
 		log.Fatal(err)
-		return
+		return nil
 	}
-	gormDB, err := gorm.Open(mysql.New(mysql.Config{
+	gormDB, err = gorm.Open(mysql.New(mysql.Config{
 		Conn: sqlDB,
 	}), &gorm.Config{})
+
+	return gormDB
+}
+
+func saveToDB(counter Protocols, filePath string) {
 
 	result := gormDB.Create(&Statistics{
 		PathToFile: filePath,
