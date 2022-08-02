@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	filename := *flag.String("fileName", "lo.pcapng", "pcap file directory")
+	filename := *flag.String("fileName", "din.pcapng", "pcap file directory")
 	flag.Parse()
 	handle, err := pcap.OpenOffline(filename)
 	defer handle.Close()

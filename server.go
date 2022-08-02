@@ -1,18 +1,29 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/binary"
 	"fmt"
 	"io"
 	"log"
 	"net"
+	"os"
 	"strconv"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
+	"github.com/google/gopacket/pcapgo"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 )
 
+const dirName = "./saved_files"
+
 func main() {
+	err := os.MkdirAll(dirName, os.ModePerm)
+	if err != nil {
+		log.Fatalf("couldn't create path, %v", err)
+	}
 	server, err := net.Listen("tcp", "localhost:8080")
 	if err != nil {
 		log.Fatal(err)
@@ -49,6 +60,8 @@ var (
 	dns layers.DNS
 )
 
+var ind int = 0
+
 func countTCPAndUDP(connect net.Conn) {
 
 	parser := gopacket.NewDecodingLayerParser(
@@ -63,6 +76,19 @@ func countTCPAndUDP(connect net.Conn) {
 
 	decoded := make([]gopacket.LayerType, 0, 10)
 	counter := Protocols{}
+	fileName := dirName + "/lo" + strconv.Itoa(ind) + ".pcap"
+
+	file, err := os.Create(fileName)
+
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	defer file.Close()
+
+	w := pcapgo.NewWriter(file)
+	w.WriteFileHeader(65535, layers.LinkTypeEthernet)
 	for {
 		read, err := receiveALL(connect, 8)
 
@@ -96,8 +122,17 @@ func countTCPAndUDP(connect net.Conn) {
 				counter.IPv6++
 			}
 		}
+		packet := gopacket.NewPacket(read, layers.LayerTypeEthernet, gopacket.Default)
+
+		err = w.WritePacket(packet.Metadata().CaptureInfo, packet.Data())
+
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
 
 	}
+	go saveToDB(counter, dirName+fileName)
 
 	res := "TCP: " + strconv.Itoa(counter.TCP) + "\n" +
 		"UDP: " + strconv.Itoa(counter.UDP) + "\n" +
@@ -108,6 +143,7 @@ func countTCPAndUDP(connect net.Conn) {
 	connect.Close()
 	fmt.Println("File receiving has ended")
 	fmt.Println()
+	ind++
 }
 
 func receiveALL(connect net.Conn, size uint64) ([]byte, error) {
@@ -130,4 +166,41 @@ func receiveALL(connect net.Conn, size uint64) ([]byte, error) {
 	// 	n += n2
 	// }
 	return read, nil
+}
+
+type Statistics struct {
+	gorm.Model
+	PathToFile string
+	TCP        int
+	UDP        int
+	IPv4       int
+	IPv6       int
+}
+
+func saveToDB(counter Protocols, filePath string) {
+
+	sqlDB, err := sql.Open("mysql", "pcap_files")
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+	gormDB, err := gorm.Open(mysql.New(mysql.Config{
+		Conn: sqlDB,
+	}), &gorm.Config{})
+
+	result := gormDB.Create(&Statistics{
+		PathToFile: filePath,
+		TCP:        counter.TCP,
+		UDP:        counter.UDP,
+		IPv4:       counter.IPv4,
+		IPv6:       counter.IPv6,
+	})
+
+	if result.Error != nil {
+		log.Fatal(result.Error)
+		return
+	}
+
+	fmt.Printf("Record saved to DataBase!")
+
 }

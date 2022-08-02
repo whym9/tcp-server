@@ -10,7 +10,6 @@ CREATE TABLE File_Statistics (
     IPv4 INT,
     IPv6 INT,
     PRIMARY KEY (ID),
-    FOREIGN KEY (FileID) REFERENCES Files (FileID)
 );
 
 
