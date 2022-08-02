@@ -128,7 +128,7 @@ func countTCPAndUDP(connect net.Conn) {
 		w.WritePacket(packet.Metadata().CaptureInfo, read)
 
 	}
-	//go saveToDB(counter, dirName+fileName)
+	go saveToDB(counter, dirName+fileName)
 
 	res := "TCP: " + strconv.Itoa(counter.TCP) + "\n" +
 		"UDP: " + strconv.Itoa(counter.UDP) + "\n" +
