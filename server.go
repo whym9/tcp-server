@@ -6,10 +6,11 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"math/rand"
+
 	"net"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
@@ -61,8 +62,6 @@ var (
 	dns layers.DNS
 )
 
-var ind int = 0
-
 func countTCPAndUDP(connect net.Conn) {
 
 	parser := gopacket.NewDecodingLayerParser(
@@ -77,8 +76,8 @@ func countTCPAndUDP(connect net.Conn) {
 
 	decoded := make([]gopacket.LayerType, 0, 10)
 	counter := Protocols{}
-	ind := rand.Intn(10000)
-	fileName := dirName + "/lo" + strconv.Itoa(ind) + ".pcap"
+
+	fileName := dirName + "/" + time.Now().Format("01-06-2006-145844.456") + ".pcap"
 
 	file, err := os.Create(fileName)
 
@@ -129,7 +128,7 @@ func countTCPAndUDP(connect net.Conn) {
 		w.WritePacket(packet.Metadata().CaptureInfo, read)
 
 	}
-	go saveToDB(counter, dirName+fileName)
+	//go saveToDB(counter, dirName+fileName)
 
 	res := "TCP: " + strconv.Itoa(counter.TCP) + "\n" +
 		"UDP: " + strconv.Itoa(counter.UDP) + "\n" +
@@ -140,7 +139,7 @@ func countTCPAndUDP(connect net.Conn) {
 	connect.Close()
 	fmt.Println("File receiving has ended")
 	fmt.Println()
-	ind++
+
 }
 
 func receiveALL(connect net.Conn, size uint64) ([]byte, error) {
