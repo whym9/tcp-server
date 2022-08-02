@@ -80,7 +80,7 @@ func countTCPAndUDP(connect net.Conn) {
 	decoded := make([]gopacket.LayerType, 0, 10)
 	counter := Protocols{}
 
-	fileName := dirName + "/" + time.Now().Format("01-06-2006-145844.456") + ".pcap"
+	fileName := dirName + "/" + time.Now().Format("02-01-2006-111111.456") + ".pcap"
 
 	file, err := os.Create(fileName)
 
