@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
+	"github.com/google/gopacket/pcap"
 	"github.com/google/gopacket/pcapgo"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -65,19 +67,16 @@ var (
 	dns layers.DNS
 )
 
+type Capture struct {
+	TimeStamp      time.Time     `json: "time"`
+	CaptureLength  int           `json: "caplength"`
+	Length         int           `json: "length"`
+	InterfaceIndex int           `json :  "index"`
+	AccalaryData   []interface{} `json: "accalary"`
+}
+
 func countTCPAndUDP(connect net.Conn) {
 
-	parser := gopacket.NewDecodingLayerParser(
-		layers.LayerTypeEthernet,
-		&eth,
-		&ip4,
-		&ip6,
-		&tcp,
-		&udp,
-		&dns,
-	)
-
-	decoded := make([]gopacket.LayerType, 0, 10)
 	counter := Protocols{}
 
 	fileName := dirName + "/" + time.Now().Format("02-01-2006-111111.456") + ".pcap"
@@ -103,34 +102,30 @@ func countTCPAndUDP(connect net.Conn) {
 
 		size := binary.BigEndian.Uint64(read)
 		read, err = receiveALL(connect, size)
-
 		if size == 4 && string(read) == "STOP" {
 			break
 		}
+		var capi Capture
+		json.Unmarshal(read, &capi)
+
+		read, err = receiveALL(connect, 8)
+		size = binary.BigEndian.Uint64(read)
+		read, err = receiveALL(connect, size)
 
 		fmt.Printf("File size: %v\n", size)
 
-		parser.DecodeLayers(read, &decoded)
-
-		for _, layer := range decoded {
-			if layer == layers.LayerTypeTCP {
-				counter.TCP++
-			}
-			if layer == layers.LayerTypeUDP {
-				counter.UDP++
-			}
-			if layer == layers.LayerTypeIPv4 {
-				counter.IPv4++
-			}
-			if layer == layers.LayerTypeIPv6 {
-				counter.IPv6++
-			}
-		}
 		packet := gopacket.NewPacket(read, layers.LayerTypeEthernet, gopacket.Default)
 
-		w.WritePacket(packet.Metadata().CaptureInfo, read)
+		packet.Metadata().CaptureInfo.Timestamp = capi.TimeStamp
+		packet.Metadata().CaptureInfo.CaptureLength = capi.CaptureLength
+		packet.Metadata().CaptureInfo.Length = capi.Length
+		packet.Metadata().CaptureInfo.InterfaceIndex = capi.InterfaceIndex
+		packet.Metadata().CaptureInfo.AncillaryData = capi.AccalaryData
+
+		w.WritePacket(packet.Metadata().CaptureInfo, packet.Data())
 
 	}
+	counter, _ = Process(fileName)
 	go saveToDB(counter, dirName+fileName)
 
 	res := "TCP: " + strconv.Itoa(counter.TCP) + "\n" +
@@ -183,6 +178,7 @@ func DB() *gorm.DB {
 func saveToDB(counter Protocols, filePath string) {
 
 	result := gormDB.Create(&Statistics{
+		Model:      gorm.Model{},
 		PathToFile: filePath,
 		TCP:        counter.TCP,
 		UDP:        counter.UDP,
@@ -196,5 +192,63 @@ func saveToDB(counter Protocols, filePath string) {
 	}
 
 	fmt.Printf("Record saved to Database!")
+
+}
+
+func Process(fileName string) (Protocols, error) {
+
+	parser := gopacket.NewDecodingLayerParser(
+		layers.LayerTypeEthernet,
+		&eth,
+		&ip4,
+		&ip6,
+		&tcp,
+		&udp,
+		&dns,
+	)
+
+	decoded := make([]gopacket.LayerType, 0, 10)
+
+	handle, err := pcap.OpenOffline(fileName)
+
+	defer handle.Close()
+
+	if err != nil {
+		log.Fatal(err)
+		return Protocols{}, err
+	}
+
+	counter := Protocols{}
+
+	for {
+		data, _, err := handle.ZeroCopyReadPacketData()
+		if err == io.EOF {
+			break
+		}
+
+		if err != nil {
+			log.Fatal(err)
+			return Protocols{}, err
+		}
+
+		parser.DecodeLayers(data, &decoded)
+
+		for _, layer := range decoded {
+			if layer == layers.LayerTypeTCP {
+				counter.TCP++
+			}
+			if layer == layers.LayerTypeUDP {
+				counter.UDP++
+			}
+			if layer == layers.LayerTypeIPv4 {
+				counter.IPv4++
+			}
+			if layer == layers.LayerTypeIPv6 {
+				counter.IPv6++
+			}
+		}
+
+	}
+	return counter, nil
 
 }
